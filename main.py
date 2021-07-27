@@ -1,3 +1,4 @@
+import json
 from tkinter import *
 # you have to import messagebox module separately
 from tkinter import messagebox
@@ -31,26 +32,56 @@ def generate_password():
     password_entry.insert(END, password)
     pyperclip.copy(password)
 
+
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def add_password():
     # get entered values from tkinter entries
     add_website_entry = website_entry.get()
     add_username_entry = username_entry.get()
     add_password_entry = password_entry.get()
+    new_data = {
+        add_website_entry: {
+            "email": add_username_entry,
+            "password": add_password_entry
+        }
+    }
     if len(add_website_entry) == 0 or len(add_password_entry) == 0:
         messagebox.showinfo(title="Oops", message="Please fill all required fields!")
     else:
-        # message box tkinter
-        # Important -> messagebox.askokcancel will return a boolean based on the input
-        ready_to_save = messagebox.askokcancel(title=add_website_entry,
-                                               message=f"These are the details entered: \n Email : {add_username_entry}\n Password : {add_password_entry}\n\n Is above information okay to Save?")
-        if ready_to_save:
-            # writing the password into password_store.txt file
-            with open("password_store.txt", mode="a") as password_file:
-                password_file.write(f"{add_website_entry} | {add_username_entry} | {add_password_entry}\n")
-                website_entry.delete(0, END)
-                password_entry.delete(0, END)
+        try:
+            # writing the password into data.json file
+            with open("data.json", mode="r") as password_file:
+                # Read old data
+                data = json.load(password_file)
+        except FileNotFoundError:
+            with open("data.json", mode="w") as password_file:
+                json.dump(new_data, password_file, indent=4)
+        else:
+            # Update old data with new data
+            data.update(new_data)
+            with open("data.json", mode="w") as password_file:
+                # saving updated data
+                json.dump(data, password_file, indent=4)
+        finally:
+            website_entry.delete(0, END)
+            password_entry.delete(0, END)
 
+
+# ---------------------------- SAVE PASSWORD ------------------------------- #
+def search_account():
+    get_website_entry = website_entry.get().capitalize()
+    try:
+        with open("data.json", mode="r") as data_file:
+            data = json.load(data_file)
+    except FileNotFoundError:
+        messagebox.showinfo(title="Oops", message="No data file found! Please Add data first!")
+    else:
+        if get_website_entry in data:
+            email = data[get_website_entry]['email']
+            password = data[get_website_entry]['password']
+            messagebox.showinfo(title=f"{get_website_entry}", message=f"Email: {email}\nPassword: {password}")
+        else:
+            messagebox.showinfo(title="Oops", message="No details exists for the searched website!")
 
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
@@ -66,9 +97,11 @@ canvas.grid(row=0, column=1)
 # website label section
 website_label = Label(text="Website :", font=(FONT_NAME, 12, "normal"))
 website_label.grid(row=1, column=0)
-website_entry = Entry(width=35)
-website_entry.grid(row=1, column=1, columnspan=2)
+website_entry = Entry(width=21)
+website_entry.grid(row=1, column=1)
 website_entry.focus()
+password_generate_button = Button(text="Search", width=13, command=search_account)
+password_generate_button.grid(row=1, column=2)
 
 # Email/Username section
 username_label = Label(text="Username/Email :", font=(FONT_NAME, 12, "normal"))
